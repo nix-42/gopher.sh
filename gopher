@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 # Author:  Stanislav <git.io/monesonn>
-# Description: Shell script for installing and updating Golang.
+# Description: Shell script for fetching and updating Golang.
 # Licence: ISC
 # Credit:  https://gist.github.com/nikhita/432436d570b89cab172dcf2894465753
 
 set -euo pipefail
 IFS=$'\n\t'
 
-_version="1.0"
+_version="1.0.1"
 _shell=`getent passwd $LOGNAME | cut -d: -f7 | awk -F "/" '{print $NF}'`
 
 blue_color="\033[34m"
@@ -37,14 +37,14 @@ EOF
 
 help () {
 cat << EOF
-Description: Shell script for installing and updating Golang.
+Description: Shell script for fetching and updating Golang.
 Usage: `basename $0` [options]
 
 Options:
 --go       go       Start script
 
 --version  version  Show current Golang version
---help     help     Show this message
+--help     help     Show help text
 EOF
 }
 
@@ -76,35 +76,26 @@ go! () {
             curl --silent https://storage.googleapis.com/golang/$release.$os-$arch.tar.gz | sudo tar -vxz --strip-components 1 -C /usr/local/go
     ) || exit 0
 
-    [[ `command -v go` ]] || \
-        gopher_say "Adding Golang to PATH."; \
-        if [[ $_shell = "zsh" ]]; then
-            gopher_say "Default shell: $_shell"
-            sed -i '$a export GOPATH=$HOME/.go' $HOME/.zshenv;
-            sed -i '$a export GOBIN="$GOPATH/bin"' $HOME/.zshenv;
-            sed -i '$a export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin' $HOME/.zshenv;
-            gopher_say "Added to .zshenv"
-            . $HOME/.zshenv
-            gopher_say "source ~/.zshenv"
-        elif [[ $_shell = "bash" ]]; then
-            gopher_say "Default shell: $_shell"
-            sed -i '$a export GOPATH=$HOME/.go' $HOME/.bash_profile;
-            sed -i '$a export GOBIN="$GOPATH/bin"' $HOME/.bash_profile;
-            sed -i '$a export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin' $HOME/.bash_profile;
-            gopher_say "Added to .bash_profile"
-            . $HOME/.bash_profile
-            gopher_say "source ~/.bash_profile"
-        else
-            gopher_say "Default shell: $_shell"
-            sed -i '$a export GOPATH=$HOME/.go' $HOME/.profile;
-            sed -i '$a export GOBIN="$GOPATH/bin"' $HOME/.profile;
-            sed -i '$a export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin' $HOME/.profile;
-            gopher_say "Added to .profile"
-            . $HOME/.profile
-            gopher_say "source ~/.profile"
-        fi
-
     gopher_say "$release is installed."
+
+    if [[ ":$PATH:" != *":/usr/local/go/bin:"* ]]; then
+       gopher_say "Adding Golang to PATH."
+       if [[ $_shell = "zsh" ]]; then
+           profile=".zshenv"
+       elif [[ $_shell = "bash" ]]; then
+           profile=".bash_profile"
+       else
+           profile=".profile"
+       fi
+       gopher_say "Default shell: $_shell"
+       sed -i '$a export GOPATH=$HOME/.go' $HOME/$profile
+       sed -i '$a export GOBIN="$GOPATH/bin"' $HOME/$profile
+       sed -i '$a export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin' $HOME/$profile
+       gopher_say "Added to $profile"
+       . $HOME/$profile
+       gopher_say "source ~/$profile"
+    fi
+
     gopher_say "Have fun!"
 }
 
@@ -132,4 +123,4 @@ __main__ () {
   err "Something went wrong...";
 }
 
-[ ${#} -eq 0 ] && banner || __main__ "$@"
+[ ${#} -eq 0 ] && { banner; help; } || __main__ "$@"
