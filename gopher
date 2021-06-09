@@ -92,6 +92,9 @@ go! () {
        else
            profile=".profile"
        fi
+
+      [ -a $HOME/$profile ] || touch $PWD/$profile
+
        gopher_say "Default shell: $_shell"
        sed -i '$a export GOPATH=$HOME/.go' $HOME/$profile
        sed -i '$a export GOBIN="$GOPATH/bin"' $HOME/$profile
