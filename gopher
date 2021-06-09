@@ -67,7 +67,7 @@ go! () {
 
     release=`curl --silent https://golang.org/doc/devel/release | grep -Eo 'go[0-9]+(\.[0-9]+)+' | sort -V | uniq | tail -1`
     os=`uname -s | tr '[:upper:]' '[:lower:]'`
-    arch=`case "$(uname -m)" in i*) echo '386' ;; x*) echo 'amd64' ;; *) echo 'armv61'; esac`
+    arch=`case "$(uname -m)" in i*) printf '386' ;; x*) printf 'amd64' ;; *) printf 'armv61'; esac`
 
     [[ `command -v go` ]] && \
         current_version=`go version | grep -Eo 'go[0-9]+(\.[0-9]+)+'` && \
@@ -96,9 +96,9 @@ go! () {
       [ -a $HOME/$profile ] || touch $PWD/$profile
 
        gopher_say "Default shell: $_shell"
-       sed -i '$a export GOPATH=$HOME/.go' $HOME/$profile
-       sed -i '$a export GOBIN="$GOPATH/bin"' $HOME/$profile
-       sed -i '$a export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin' $HOME/$profile
+       printf %s\\n 'export GOPATH=$HOME/.go' >> $HOME/$profile
+       printf %s\\n 'export GOBIN="$GOPATH/bin"' >> $HOME/$profile
+       printf %s\\n 'export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin' >> $HOME/$profile
        gopher_say "Added to $profile"
        . $HOME/$profile
        gopher_say "source ~/$profile"
