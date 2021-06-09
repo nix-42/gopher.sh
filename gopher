@@ -8,7 +8,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-_version="1.0.1"
+_version="1.0.2"
 _shell=`getent passwd $LOGNAME | cut -d: -f7 | awk -F "/" '{print $NF}'`
 
 blue_color="\033[34m"
@@ -26,25 +26,30 @@ cat << "EOF"
       |           _l__l_           I
       }          [______]           I
       ]            | | |            |
-      ]           __~ ~             |__
-  ___ ____  ___  / /  ___ ____  ___ / /
- / _ `/ _ \/ _ \/ _ \/ -_) __/ (_-</ _ \
- \_, /\___/ .__/_//_/\__/_/ (_)___/_//_/
-/___/    /_/
+      ]             ~_~             |   __
+     ___ ____  ___  / /  ___ ____  ___ / /
+    / _ `/ _ \/ _ \/ _ \/ -_) __/ (_-</ _ \
+    \_, /\___/ .__/_//_/\__/_/ (_)___/_//_/
+   /___/    /_/
 
 EOF
 }
 
 help () {
+
+printf %b\\n\\n "${blue_color}`basename $0` v.$_version ${no_color}"
 cat << EOF
-Description: Shell script for fetching and updating Golang.
-Usage: `basename $0` [options]
+Description:
+    Shell script for fetching and updating Golang.
+
+Usage:
+    `basename $0` [options]
 
 Options:
---go       go       Start script
+    --go       go           Start script
 
---version  version  Show current Golang version
---help     help     Show help text
+    --version  version      Show current Golang version
+    --help     help         Show help text
 EOF
 }
 
@@ -60,7 +65,7 @@ gopher_say () {
 go! () {
     gopher_say "Starting."
 
-    release=`curl --silent https://golang.org/doc/devel/release.html | grep -Eo 'go[0-9]+(\.[0-9]+)+' | sort -V | uniq | tail -1`
+    release=`curl --silent https://golang.org/doc/devel/release | grep -Eo 'go[0-9]+(\.[0-9]+)+' | sort -V | uniq | tail -1`
     os=`uname -s | tr '[:upper:]' '[:lower:]'`
     arch=`case "$(uname -m)" in i*) echo '386' ;; x*) echo 'amd64' ;; *) echo 'armv61'; esac`
 
