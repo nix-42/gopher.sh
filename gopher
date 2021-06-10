@@ -8,13 +8,16 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-_version="1.0.3"
+_version="1.1.0"
 _shell=`getent passwd $LOGNAME | cut -d: -f7 | awk -F "/" '{print $NF}'`
+_destination="$HOME/.gopher"
 
-blue_color="\033[34m"
-yellow_color="\033[1;33m"
-red_color="\033[0;31m"
-no_color="\033[0;m"
+fuzzy=false
+
+blue="\033[34m"
+yellow="\033[1;33m"
+red="\033[0;31m"
+noc="\033[0;m"
 
 banner () {
 cat << "EOF"
@@ -37,7 +40,7 @@ EOF
 
 help () {
 
-printf %b\\n\\n "${blue_color}`basename $0` v.$_version ${no_color}"
+printf %b\\n\\n "${blue}`basename $0` v.$_version ${noc}"
 cat << EOF
 Description:
     Shell script for fetching and updating Golang.
@@ -54,19 +57,19 @@ EOF
 }
 
 err () {
-    printf %b\\n "${red_color}[!] ${yellow_color}$@${no_color}"
+    printf %b\\n "${red}[!] ${yellow}$@${noc}"
 }
 
 gopher_say () {
-    printf %b\\n "${blue_color}[gopher]${no_color} $1"
+    printf %b\\n "${blue}[gopher]${noc} $1"
 }
 
 gopher_say_sleepy () {
-    printf %b\\n "${blue_color}[gopher]${no_color} $1"
+    printf %b\\n "${blue}[gopher]${noc} $1"
     sleep 1
 }
 
-version() {
+version () {
     [[ `command -v go` ]] && (
         gopher_say "script version $_version"
         gopher_say `go version`
@@ -75,10 +78,31 @@ version() {
         )
 }
 
+check () {
+    release=`curl --silent https://golang.org/doc/devel/release | grep -Eo 'go[0-9]+(\.[0-9]+)+' | sort -V | uniq | tail -1`
+
+    gopher_say "$release is available."
+
+   [[ `command -v go` ]] && \
+        current_version=`go version | grep -Eo 'go[0-9]+(\.[0-9]+)+'` && \
+        [[ $current_version == $release ]] && { gopher_say_sleepy "All is up to date."; exit 0; }
+}
+
+find () {
+    release=`curl --silent https://golang.org/doc/devel/release | grep -Eo "go$1" | sort -V | uniq `
+
+    gopher_say "$release is available."
+}
+
 go! () {
     gopher_say_sleepy "Starting."
 
-    release=`curl --silent https://golang.org/doc/devel/release | grep -Eo 'go[0-9]+(\.[0-9]+)+' | sort -V | uniq | tail -1`
+    [ ${#} -eq 0 ] && release_pattern='go[0-9]+(\.[0-9]+)+' || release_pattern="go$1"
+
+    [ $fuzzy = true ] && \
+        release=`curl --silent https://golang.org/doc/devel/release | grep -Eo $release_pattern | sort -rV | uniq | fzf` || \
+        release=`curl --silent https://golang.org/doc/devel/release | grep -Eo $release_pattern | sort -rV | uniq | head -1`
+
     os=`uname -s | tr '[:upper:]' '[:lower:]'`
     arch=`case "$(uname -m)" in i*) printf '386' ;; x*) printf 'amd64' ;; *) printf 'armv61'; esac`
 
@@ -86,17 +110,27 @@ go! () {
         current_version=`go version | grep -Eo 'go[0-9]+(\.[0-9]+)+'` && \
         [[ $current_version == $release ]] && { gopher_say_sleepy "All is up to date."; exit 0; }
 
-    gopher_say_sleepy "$release $os/$arch will installed. Is it correct?"
-    read -n 1 -s -e -p '[y/n]> ' answer
+    gopher_say_sleepy "$release $os/$arch will installed. Is it correct? [y/n]"
+    read -n 1 -s -e -p '[gopher] ' answer
 
     [ $answer != "${answer#[Yy]}" ] && (
-            [ -d /usr/local/go ] || sudo mkdir /usr/local/go && gopher_say_sleepy "/usr/local/go is created";
-            curl --silent https://storage.googleapis.com/golang/$release.$os-$arch.tar.gz | sudo tar -vxz --strip-components 1 -C /usr/local/go
-    ) || exit 0
+            _temp=`mktemp -d` && gopher_say_sleepy "temp => $_temp";
+            [ -d $_destination/go ] || mkdir -p $_destination/go && gopher_say_sleepy "$_destination/go is created.";
 
-    gopher_say_sleepy "$release is installed."
+            gopher_say_sleepy "$release.$os-$arch is installing.";
+            gopher_say_sleepy "Progress:";
+            curl -# https://storage.googleapis.com/golang/$release.$os-$arch.tar.gz -o $_temp/$release.$os-$arch.tar.gz;
 
-    if [[ ":$PATH:" != *":/usr/local/go/bin:"* ]]; then
+            gopher_say_sleepy "Extracting $_temp/$release.$os-$arch => $_destination/go.";
+            tar -C $_destination/go --strip-components 1 -xzf $_temp/$release.$os-$arch.tar.gz;
+            gopher_say_sleepy "Extracted.";
+
+            gopher_say_sleepy "$release is installed.";
+
+            rm -f $_temp/$release.$os-$arch.tar.gz && gopher_say_sleepy "$_temp/$release.$os-$arch.tar.gz is deleted."
+            ) || gopher_say_sleepy "See ya!"; exit 0;
+
+    if [[ ":$PATH:" != *":$_destination/go:"* ]]; then
        gopher_say_sleepy "Adding Golang to PATH."
        if [[ $_shell = "zsh" ]]; then
            profile=".zshenv"
@@ -109,9 +143,10 @@ go! () {
       [ -a $HOME/$profile ] || touch $PWD/$profile
 
        gopher_say_sleepy "Default shell: $_shell"
+       printf %s\\n "export GOPHER_PATH=$_destination" >> $HOME/$profile
        printf %s\\n 'export GOPATH=$HOME/.go' >> $HOME/$profile
        printf %s\\n 'export GOBIN="$GOPATH/bin"' >> $HOME/$profile
-       printf %s\\n 'export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin' >> $HOME/$profile
+       printf %s\\n 'export PATH=$PATH:/$GOPHER_PATH/go/bin:$GOPATH/bin' >> $HOME/$profile
        gopher_say_sleepy "Added to $profile"
        . $HOME/$profile
        gopher_say_sleepy "source ~/$profile"
@@ -126,6 +161,19 @@ __main__ () {
     case $argument in
         --go | go)
             go!
+            shift
+            exit 0 ;;
+        --go=* | go=*)
+            go! "${argument#*=}"
+            shift
+            exit 0 ;;
+        --fuzzy | fuzzy)
+            fuzzy=true
+            go!
+            shift
+            exit 0 ;;
+        --check | check )
+            check
             shift
             exit 0 ;;
         --version | version)
