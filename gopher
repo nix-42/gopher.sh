@@ -130,7 +130,7 @@ go! () {
         gopher_say_sleepy "Progress:"
         curl -# https://storage.googleapis.com/golang/$release.$os-$arch.tar.gz -o $_temp/$release.$os-$arch.tar.gz
 
-        gopher_say_sleepy "Extracting $_temp/$release.$os-$arch => $_destination/go."
+        gopher_say_sleepy "Extracting $_temp/$release.$os-$arch => $_destination/go"
         tar -C $_destination/go --strip-components 1 -xzf $_temp/$release.$os-$arch.tar.gz
         gopher_say_sleepy "Extracted."
 
