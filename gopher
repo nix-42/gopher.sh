@@ -46,13 +46,22 @@ Description:
     Shell script for fetching and updating Golang.
 
 Usage:
-    `basename $0` [options]
+    `basename $0` [option]
 
 Options:
-    --go       go           Start script
+    --go       go           Startpoint
+    --check    check        Check out new releases
+    --fuzzy    fuzzy        Same as above option, but uses fzf for searching specific versions
+                            Use one of them
 
-    --version  version      Show current Golang version
+    --version  version      Show current Golang and script version
     --help     help         Show help text
+
+Examples:
+    gopher go
+    gopher fuzzy
+    gopher go='specific version' like 1.16.5
+
 EOF
 }
 
